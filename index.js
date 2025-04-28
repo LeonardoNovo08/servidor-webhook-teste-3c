@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Autenticação com Google Sheets (conta de serviço)
 const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, 'lithe-transport-456818-g5-faf4764df975.json'), // substitua pelo nome do seu arquivo
+    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON), // substitua pelo nome do seu arquivo
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
@@ -44,6 +44,7 @@ app.patch('/webhook', handleWebhook);
 
 async function handleWebhook(req, res) {
     console.log(`Webhook recebido via ${req.method}`);
+    console.dir(req.body, { depth: null }); // Exibe o corpo da requisição no console
     console.log('Corpo da requisição:', JSON.stringify(req.body, null, 2));
 
     if (!Array.isArray(req.body) || req.body.length === 0) {
@@ -68,7 +69,7 @@ async function handleWebhook(req, res) {
             return res.status(404).send('ID Kommo não encontrado para o agente informado');
         }
 
-        const url = `https://madm.kommo.com/api/v4/leads/${lead_id}`;
+        const url = `https://madm.kommo.com/api/v4/leads`;
         const payload = [
         {
             id: Number(lead_id), // transformando lead_id em número 
@@ -93,12 +94,17 @@ async function handleWebhook(req, res) {
         }
 
     } catch (err) {
-        console.error('Erro ao processar webhook:', err.response?.data || err.message);
-        return res.status(500).send('Erro interno no servidor');
-    }
+        if (err.response) {
+            console.error('Erro ao atualizar o lead na Kommo:', err.response.data);
+        } else {
+            console.error('Erro ao processar o webhook:', err.message);
+        }
+            return res.status(500).send('Erro interno no servidor');
+        }
 }
 
 // Inicia o servidor
-app.listen(3000, () => {
-    console.log('🚀 Servidor rodando na porta 3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
