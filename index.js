@@ -7,9 +7,18 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// Autenticação com Google Sheets (conta de serviço)
+// Decodifica a chave da conta de serviço
+function getGoogleCredentialsFromEnv() {
+    const base64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64;
+    if (!base64) {
+        throw new Error('❌ GOOGLE_SERVICE_ACCOUNT_BASE64 não definido no .env');
+    }
+    return JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+}
+
+// Autenticação com Google Sheets
 const auth = new google.auth.GoogleAuth({
-    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+    credentials: getGoogleCredentialsFromEnv(),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
@@ -39,8 +48,8 @@ app.patch('/webhook', handleWebhook);
 
 async function handleWebhook(req, res) {
     console.log(`📩 Webhook recebido via ${req.method}`);
-
-    // Aceita tanto objeto quanto array como entrada
+    console.log('🪵 Body recebido:', JSON.stringify(req.body, null, 2));
+    console.log(JSON.stringify(req.body, null, 2));
     const entrada = Array.isArray(req.body) ? req.body[0] : req.body;
     const data = entrada?.['call-was-connected']?.call;
 
@@ -93,6 +102,15 @@ async function handleWebhook(req, res) {
 
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
+(async () => {
+    try {
+        const idTeste = await buscarIDKommoPorAgent('Leonardo Siqueira');
+        console.log('🧪 ID encontrado para o agente:', idTeste);
+    } catch (err) {
+        console.error('❌ Erro no teste de busca de ID:', err.message);
+    }
+})();
+
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
